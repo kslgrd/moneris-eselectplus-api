@@ -137,6 +137,37 @@ class Moneris_Result
 	}
 	
 	/**
+	 * Moneris reference number.
+	 *
+	 * @return void
+	 * @author Keith Silgard
+	 */
+	public function reference_number()
+	{
+		return $this->transaction()->response()->receipt->ReferenceNum;
+	}
+	
+	/**
+	 * Moneris' response code.
+	 *
+	 * @return string
+	 */
+	public function response_code()
+	{
+		return $this->transaction()->response()->receipt->ResponseCode;
+	}
+	
+	/**
+	 * Moneris' response message.
+	 *
+	 * @return string
+	 */
+	public function response_message()
+	{
+		return $this->transaction()->response()->receipt->Message;
+	}
+	
+	/**
 	 * Get the transaction object for this result.
 	 *
 	 * @param Moneris_Transaction $transaction 
