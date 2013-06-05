@@ -355,6 +355,7 @@ class Moneris_Transaction
 				case 487: 
 				case 489: 
 				case 490: 
+					$result->failed_cvd(true);
 					$result->error_code(Moneris_Result::ERROR_CVD); 
 					break;
 				case 0: 
@@ -398,14 +399,19 @@ class Moneris_Transaction
 					$result->error_code(Moneris_Result::ERROR_AVS);
 			}
 			
-			return $result->was_successful(false);
+			
+			return $result->failed_avs(true)->was_successful(false);
 			
 		}
 		
 		
 		// if the transaction used CVD, we need to know if it was successful, and void the transaction if it wasn't:
-		if ($gateway->check_cvd()) {
-			
+		if ($gateway->check_cvd()
+			&& isset($receipt->CvdResultCode) 
+			&& ! in_array($receipt->CvdResultCode{1}, $gateway->successful_cvd_codes())) {
+				
+			$result->error_code(Moneris_Result::ERROR_CVD); 
+			return $result->failed_cvd(true)->was_successful(false);
 		}
 
 		return $result->was_successful(true);

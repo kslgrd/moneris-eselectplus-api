@@ -72,6 +72,8 @@ class TestBasic extends UnitTestCase
 		$result = $gateway->purchase($params);
 		$this->assertIsA($result, 'Moneris_Result');
 		$this->assertTrue($result->was_successful());
+		$this->assertFalse($result->failed_avs());
+		$this->assertFalse($result->failed_cvd());
 	}
 	
 	public function testRefund()

@@ -51,6 +51,18 @@ class Moneris_Result
 	protected $_errors = array();
 	
 	/**
+	 * Whether or not this result failed AVS.
+	 * @var bool
+	 */
+	protected $_failed_avs = false;
+	
+	/**
+	 * Whether or not this result failed CVD.
+	 * @var bool
+	 */
+	protected $_failed_cvd = false;
+	
+	/**
 	 * Some nicer error messages.
 	 * @var array
 	 */
@@ -137,6 +149,36 @@ class Moneris_Result
 	public function errors()
 	{
 		return $this->transaction()->errors();
+	}
+	
+	/**
+	 * Did this result fail AVS?
+	 *
+	 * @param bool $failed 
+	 * @return bool|Moneris_Results Fluid interface on set operations.
+	 */
+	public function failed_avs($failed = null)
+	{
+		if (is_null($failed)) {
+			return $this->_failed_avs;
+		}
+		$this->_failed_avs = (bool) $failed;
+		return $this;
+	}
+	
+	/**
+	 * Did this result fail CVD?
+	 *
+	 * @param bool $failed 
+	 * @return bool|Moneris_Results Fluid interface on set operations.
+	 */
+	public function failed_cvd($failed = null)
+	{
+		if (is_null($failed)) {
+			return $this->_failed_cvd;
+		}
+		$this->_failed_cvd = (bool) $failed;
+		return $this;
 	}
 	
 	/**

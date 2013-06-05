@@ -17,6 +17,12 @@ class Moneris_Gateway
 	 */
 	protected $_successful_avs_codes = array('A','B', 'D', 'M', 'P', 'W', 'X', 'Y', 'Z');
 	
+	/**
+	 * Codes that we're willing to accept for CVD.
+	 * @var array
+	 */
+	protected $_successful_cvd_codes = array('M', 'Y', 'P', 'S', 'U');
+	
 	protected $_require_cvd = true;
 	
 	/**
@@ -283,7 +289,7 @@ class Moneris_Gateway
 	}
 	
 	/**
-	 * Get or set the AVS we'll use to determine a successful transaction.
+	 * Get or set the AVS codes we'll use to determine a successful transaction.
 	 *
 	 * @param array $codes 
 	 * @return array|Moneris_Gateway Fluid interface for set operations
@@ -296,6 +302,22 @@ class Moneris_Gateway
 			return $this;
 		}
 		return $this->_successful_avs_codes;
+	}
+	
+	/**
+	 * Get or set the CVD codes we'll use to determine a successful transaction.
+	 *
+	 * @param array $codes 
+	 * @return array|Moneris_Gateway Fluid interface for set operations
+	 * @author Keith Silgard
+	 */
+	public function successful_cvd_codes(array $codes = null)
+	{
+		if (! is_null($codes)) {
+			$this->_successful_cvd_codes = $codes;
+			return $this;
+		}
+		return $this->_successful_cvd_codes;
 	}
 	
 	/**
