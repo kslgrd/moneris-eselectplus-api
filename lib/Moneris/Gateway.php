@@ -52,10 +52,33 @@ class Moneris_Gateway
 		return $this->_api_key;
 	}
 	
-	public function capture()
+	/**
+	 * Capture a pre-authorized transaction.
+	 *
+	 * @param string|Moneris_Transation $transaction_number 
+	 * @param string $order_id Required if first param isn't an instance of Moneris_Transation
+	 * @return void
+	 */
+	public function capture($transaction_number, $order_id = null, $amount = null)
 	{
-		
+		if ($transaction_number instanceof Moneris_Transaction) {
+			$order_id = $transaction_number->order_id();
+			$amount = is_null($amount) ? $transaction_number->amount() : $amount;
+			$transaction_number = $transaction_number->number();
+		}
+		$params = array(
+			'type' => 'completion',
+			'crypt_type' => 7, 
+			'order_id' => $order_id,
+			'txn_number' => $transaction_number,
+			'comp_amount' => $amount,
+			'ship_indicator' => 'wut' // what the hell? This param isn't even in the Moneris docs, but I guess it's required? Madness.
+		);
+
+		$transaction = $this->transaction($params);
+	 	return $this->_process($transaction);
 	}
+	
 	
 	/**
 	 * Are we using AVS?
@@ -98,9 +121,44 @@ class Moneris_Gateway
 		return $this->transaction()->errors();
 	}
 	
-	public function preauth()
+	/**
+	 * Pre-authorize a purchase.
+	 *
+	 * @param array $params An associative array.
+	 * 		Required:
+	 *			- order_id string A unique transaction ID, up to 50 chars
+	 * 			- cc_number int Any non-numeric characters will be stripped
+	 *			- amount float 
+	 * 			- expdate int 4 digit date YYMM 
+	 * 			OR
+	 *			- expiry_month int 2 digit representation of the expiry month (01-12)
+	 * 			- expiry_year int last two digits of the expiry year
+	 * 		Required (if AVS is enabled):
+	 * 			- avs_street_number string Up to 19 chars combined with street name
+	 *			- avs_street_name string 
+	 * 			- avs_zipcode string Up to 10 chars
+	 * 		Optional (if AVS is enabled, Amex/JCB only): 
+	 * 			- avs_email string Up to 60 chars
+	 *			- avs_hostname string Up to 60 chars
+	 * 			- avs_browser string Up to 60 chars
+	 * 			- avs_shiptocountry string 3 chars
+	 *			- avs_method string string 2 chars
+	 * 			- avs_merchprodsku string Up to 15 chars
+	 * 			- avs_custip string 15 chars
+	 * 			- avs_custphone int 10 digits
+	 * 		Required (id CVD is enabled):
+	 *			- cvd
+	 * 		Optional:
+	 *			- description string A description of the purchase, up to 20 chars
+	 *			- cust_id string An identifier for the customer, up to 50 chars
+	 * @return Moneris_Result
+	 */
+	public function preauth(array $params)
 	{
-		
+		$params['type'] = 'preauth';
+		$params['crypt_type'] = 7;
+		$transaction = $this->transaction($params);
+	 	return $this->_process($transaction);
 	}
 	
 	/**
@@ -118,8 +176,16 @@ class Moneris_Gateway
 	 * 		Required (if AVS is enabled):
 	 * 			- avs_street_number string Up to 19 chars combined with street name
 	 *			- avs_street_name string 
-	 * 			- avs_zipcode
-	 * 			- avs_email
+	 * 			- avs_zipcode string Up to 10 chars
+	 * 		Optional (if AVS is enabled, Amex/JCB only): 
+	 * 			- avs_email string Up to 60 chars
+	 *			- avs_hostname string Up to 60 chars
+	 * 			- avs_browser string Up to 60 chars
+	 * 			- avs_shiptocountry string 3 chars
+	 *			- avs_method string string 2 chars
+	 * 			- avs_merchprodsku string Up to 15 chars
+	 * 			- avs_custip string 15 chars
+	 * 			- avs_custphone int 10 digits
 	 * 		Required (id CVD is enabled):
 	 *			- cvd
 	 * 		Optional:
@@ -140,10 +206,33 @@ class Moneris_Gateway
 		
 	}
 	
-	public function refund()
+	/**
+	 * Refund a transaction.
+	 *
+	 * @param string|Moneris_Transation $transaction_number 
+	 * @param string $order_id Required if first param isn't an instance of Moneris_Transation
+	 * @return void
+	 */
+	public function refund($transaction_number, $order_id = null, $amount = null)
 	{
-		
+		if ($transaction_number instanceof Moneris_Transaction) {
+			$order_id = $transaction_number->order_id();
+			$amount = is_null($amount) ? $transaction_number->amount() : $amount;
+			$transaction_number = $transaction_number->number();
+		}
+		// the order of these params matters for some amazingly insane reason:
+		$params = array(
+			'type' => 'refund',
+			'order_id' => $order_id,
+			'amount' => $amount,
+			'txn_number' => $transaction_number,
+			'crypt_type' => 7
+		);
+
+		$transaction = $this->transaction($params);
+	 	return $this->_process($transaction);
 	}
+	
 	
 	public function result()
 	{
@@ -235,9 +324,69 @@ class Moneris_Gateway
 		return $this;
 	}
 	
-	public function void($transaction_number, $order_id)
+	/**
+	 * Validate CVD and or AVS prior to attempting a purchase.
+	 *
+	 * @param array $params An associative array.
+	 * 		Required:
+	 *			- order_id string A unique transaction ID, up to 50 chars
+	 * 			- cc_number int Any non-numeric characters will be stripped
+	 *			- amount float 
+	 * 			- expdate int 4 digit date YYMM 
+	 * 			OR
+	 *			- expiry_month int 2 digit representation of the expiry month (01-12)
+	 * 			- expiry_year int last two digits of the expiry year
+	 * 		Required (if AVS is enabled):
+	 * 			- avs_street_number string Up to 19 chars combined with street name
+	 *			- avs_street_name string 
+	 * 			- avs_zipcode string Up to 10 chars
+	 * 		Optional (if AVS is enabled, Amex/JCB only): 
+	 * 			- avs_email string Up to 60 chars
+	 *			- avs_hostname string Up to 60 chars
+	 * 			- avs_browser string Up to 60 chars
+	 * 			- avs_shiptocountry string 3 chars
+	 *			- avs_method string string 2 chars
+	 * 			- avs_merchprodsku string Up to 15 chars
+	 * 			- avs_custip string 15 chars
+	 * 			- avs_custphone int 10 digits
+	 * 		Required (id CVD is enabled):
+	 *			- cvd
+	 * 		Optional:
+	 *			- description string A description of the purchase, up to 20 chars
+	 *			- cust_id string An identifier for the customer, up to 50 chars
+	 * @return Moneris_Result
+	 */
+	public function verify(array $params)
 	{
-		
+		$params['type'] = 'card_verification';
+		$params['crypt_type'] = 7;
+		$transaction = $this->transaction($params);
+	 	return $this->_process($transaction);
+	}
+	
+	/**
+	 * Void a transaction.
+	 *
+	 * @param string|Moneris_Transation $transaction_number 
+	 * @param string $order_id Required if first param isn't an instance of Moneris_Transation
+	 * @return void
+	 */
+	public function void($transaction_number, $order_id = null)
+	{
+		if ($transaction_number instanceof Moneris_Transaction) {
+			$order_id = $transaction_number->order_id();
+			$transaction_number = $transaction_number->number();
+		}
+		$params = array(
+			'type' => 'purchasecorrection',
+			'crypt_type' => 7, 
+			'order_id' => $order_id,
+			'txn_number' => $transaction_number,
+			'ship_indicator' => 'wut' // what the hell? This param isn't even in the Moneris docs, but I guess it's required? Madness.
+		);
+
+		$transaction = $this->transaction($params);
+	 	return $this->_process($transaction);
 	}
 	
 	/**

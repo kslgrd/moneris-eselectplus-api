@@ -36,8 +36,21 @@ class Moneris_Transaction
 	 */
 	public function __construct(Moneris_Gateway $gateway, array $params = array(), $prepare_params = true)
 	{
-		$this->_gateway = $gateway;
+		$this->gateway($gateway);
 		$this->_params = $prepare_params ? $this->prepare($params) : $params;
+	}
+	
+	/**
+	 * The amount for this transaction.
+	 * Only available for some transaction types.
+	 *
+	 * @return string|null
+	 */
+	public function amount()
+	{
+		if (isset($this->_params['amount']))
+			return $this->_params['amount'];
+		return null;
 	}
 	
 	/**
@@ -56,28 +69,47 @@ class Moneris_Transaction
 		if (isset ($params['type'])) {
 			switch ($params['type']) {
 				case 'purchase':
+				case 'preauth':
+				case 'card_verification':
 				
 					if (! isset($params['order_id'])) $errors[] = 'Order ID not provided';
 					if (! isset($params['pan'])) $errors[] = 'Credit card number not provided';
 					if (! isset($params['amount'])) $errors[] = 'Amount not provided';
 					if (! isset($params['expdate'])) $errors[] = 'Expiry date not provided';
 					
-					if ($this->_gateway->check_avs()) {
+					if ($this->gateway()->check_avs()) {
 						
 						if (! isset($params['avs_street_number'])) $errors[] = 'Street number not provided';
 						if (! isset($params['avs_street_name'])) $errors[] = 'Street name not provided';
 						if (! isset($params['avs_zipcode'])) $errors[] = 'Zip/postal code not provided';
-						if (! isset($params['avs_email'])) $errors[] = 'Email not provided';
+						
+						//@TODO email is Amex/JCB only... 
+						//if (! isset($params['avs_email'])) $errors[] = 'Email not provided';
 
 					}
 					
-					if ($this->_gateway->check_cvd()) {
+					if ($this->gateway()->check_cvd()) {
 						if (! isset($params['cvd'])) $errors[] = 'CVD not provided';
 					}
 					
 					break;
-					
 				
+				case 'purchasecorrection':
+					if (! isset($params['order_id']) || '' == $params['order_id']) $errors[] = 'Order ID not provided';
+					if (! isset($params['txn_number']) || '' == $params['txn_number']) $errors[] = 'Transaction number not provided';
+					break;
+			
+				case 'completion':
+					if (! isset($params['comp_amount']) || '' == $params['comp_amount']) $errors[] = 'Amount not provided';
+					if (! isset($params['order_id']) || '' == $params['order_id']) $errors[] = 'Order ID not provided';
+					if (! isset($params['txn_number']) || '' == $params['txn_number']) $errors[] = 'Transaction number not provided';
+					break;
+					
+				case 'refund':
+					if (! isset($params['amount']) || '' == $params['amount']) $errors[] = 'Amount not provided';
+					if (! isset($params['order_id']) || '' == $params['order_id']) $errors[] = 'Order ID not provided';
+					if (! isset($params['txn_number']) || '' == $params['txn_number']) $errors[] = 'Transaction number not provided';
+					break;
 					
 				default:
 					$errors[] = $params['type'] . ' is not a support transaction type';
@@ -121,6 +153,31 @@ class Moneris_Transaction
 	}
 	
 	/**
+	 * The transaction number (only available for transaction that have been processed).
+	 *
+	 * @return string|null
+	 */
+	public function number()
+	{
+		if (is_null($this->_response))
+			return null;
+		return (string) $this->_response->receipt->TransID;
+	}
+	
+	/**
+	 * The order ID for this transaction.
+	 * Only available for some transaction types.
+	 *
+	 * @return string|null
+	 */
+	public function order_id()
+	{
+		if (isset($this->_params['order_id']))
+			return $this->_params['order_id'];
+		return null;
+	}
+	
+	/**
 	 * Get or some some params! Like a boss!
 	 *
 	 * @param array $params 
@@ -151,6 +208,11 @@ class Moneris_Transaction
 		if (isset($params['cc_number'])) {
 			$params['pan'] = preg_replace('/\D/', '', $params['cc_number']);
 			unset($params['cc_number']);
+		}
+		
+		if (isset($params['description'])) {
+			$params['dynamic_descriptor'] = $params['description'];
+			unset($params['description']);
 		}
 		
 		if (isset($params['expiry_month']) && isset($params['expiry_year']) && ! isset($params['expdate'])) {
@@ -198,9 +260,29 @@ class Moneris_Transaction
 		
 		$xml = new SimpleXMLElement('<request/>');
 		$xml->addChild('store_id', $gateway->store_id());
-		$xml->addChild('api_key', $gateway->api_key());
+		$xml->addChild('api_token', $gateway->api_key());
 		
 		$type = $xml->addChild($params['type']);
+		unset($params['type']);
+
+		if ($gateway->check_cvd()) {
+			$cvd = $type->addChild('cvd_info');
+			$cvd->addChild('cvd_indicator', '1');
+			$cvd->addChild('cvd_value', $params['cvd']);
+			unset($params['cvd']);
+		}
+		
+		if ($gateway->check_avs()) {
+			$avs = $type->addChild('avs_info');
+			foreach ($params as $key => $value) {
+				if (substr($key, 0, 4) != 'avs_')
+					continue;
+				$avs->addChild($key, $value);
+				unset($params[$key]);
+			}
+			
+		}
+		
 		foreach ($params as $key => $value) {
 			$type->addChild($key, $value);
 		}
@@ -216,13 +298,15 @@ class Moneris_Transaction
 	 */
 	public function validate_response(SimpleXMLElement $response)
 	{
+		//var_dump($response);
 		$this->response($response);
 		$result = new Moneris_Result($this);
 		$receipt = $response->receipt;
 		$gateway = $this->gateway();
-		
+	
 		// did the transaction go through?
-		if ('Global Error Receipt' == $response->ReceiptId) {
+		if ('Global Error Receipt' == $receipt->ReceiptId) {
+
 			$result->error_code(Moneris_Result::ERROR_GLOBAL_ERROR_RECEIPT)
 				->was_successful(false);
 			return $result;
@@ -230,7 +314,7 @@ class Moneris_Transaction
 		
 		// was it a successful transaction?
 		// any response code greater than 49 is an error code:
-		if ($receipt->ResponseCode >= 50) {
+		if ((int) $receipt->ResponseCode >= 50 || (int) $receipt->ResponseCode == 0) {
 			
 			// trying to make some sense of this... grouping them as best as I can:
 			switch ($receipt->ResponseCode) {
@@ -272,6 +356,9 @@ class Moneris_Transaction
 				case 489: 
 				case 490: 
 					$result->error_code(Moneris_Result::ERROR_CVD); 
+					break;
+				case 0: 
+					$result->error_code(Moneris_Result::ERROR_SYSTEM_UNAVAILABLE); 
 					break;
 				default: 
 					$result->error_code(Moneris_Result::ERROR); 

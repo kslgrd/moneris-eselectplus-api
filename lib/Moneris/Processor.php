@@ -18,6 +18,11 @@ class Moneris_Processor
 	);
 	
 	/**
+	 * @var string
+	 */
+	static protected $_error_response = "<?xml version=\"1.0\"?><response><receipt><ReceiptId>Global Error Receipt</ReceiptId><ReferenceNum>null</ReferenceNum><ResponseCode>null</ResponseCode><ISO>null</ISO> <AuthCode>null</AuthCode><TransTime>null</TransTime><TransDate>null</TransDate><TransType>null</TransType><Complete>false</Complete><Message>null</Message><TransAmount>null</TransAmount><CardType>null</CardType><TransID>null</TransID><TimedOut>null</TimedOut></receipt></response>";
+	
+	/**
 	 * Get the API config.
 	 *
 	 * @param string $environment 
@@ -25,7 +30,7 @@ class Moneris_Processor
 	 */
 	static public function config($environment)
 	{
-		if ($environment == Moneris::ENV_STAGING) {
+		if ($environment != Moneris::ENV_LIVE) {
 			self::$_config['host'] = 'esqa.moneris.com';
 		} else {
 			self::$_config['host'] = 'www3.moneris.com';
@@ -42,7 +47,8 @@ class Moneris_Processor
 	static public function process(Moneris_Transaction $transaction)
 	{
 		if (! $transaction->is_valid()) {
-			//TODO: set error code
+			$result = new Moneris_Result($transaction);
+			$result->was_successful(false);
 			$result->error_code(Moneris_Result::ERROR_INVALID_POST_DATA);
 			return $result; 
 		}
@@ -68,6 +74,7 @@ class Moneris_Processor
 			   $config['url'];
 		
 		$xml = $transaction->to_xml();
+		//var_dump($xml);
 		
 		// this is pulled directly from mpgClasses.php
 		$ch = curl_init();
@@ -78,7 +85,7 @@ class Moneris_Processor
 		curl_setopt($ch, CURLOPT_POSTFIELDS, $xml);
 		curl_setopt($ch, CURLOPT_TIMEOUT, $config['timeout']);
 		curl_setopt($ch, CURLOPT_USERAGENT, $config['api_version']);
-		curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, TRUE);
+		curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, true);
 		
 		$response = curl_exec($ch);
 		curl_close($ch);
@@ -86,10 +93,17 @@ class Moneris_Processor
 		// if the response fails for any reason, just use some stock XML
 		// also taken directly from mpgClasses:
 		if (! $response) {
-			$response="<?xml version=\"1.0\"?><response><receipt><ReceiptId>Global Error Receipt</ReceiptId><ReferenceNum>null</ReferenceNum><ResponseCode>null</ResponseCode><ISO>null</ISO> <AuthCode>null</AuthCode><TransTime>null</TransTime><TransDate>null</TransDate><TransType>null</TransType><Complete>false</Complete><Message>null</Message><TransAmount>null</TransAmount><CardType>null</CardType><TransID>null</TransID><TimedOut>null</TimedOut></receipt></response>";
+			return simplexml_load_string(self::$_error_response);
 		}
 		
-		return simplexml_load_string($response);
+		$xml = @simplexml_load_string($response);
+		
+		// they sometimes return HTML formatted Apache errors... NICE.
+		if ($xml === false) {
+			return simplexml_load_string(self::$_error_response);
+		}
+		
+		return $xml;
 		
 	}
 }

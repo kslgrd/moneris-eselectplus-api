@@ -5,6 +5,7 @@
 class Moneris_Result
 {
 	
+	const ERROR = -23; 
 	const ERROR_INVALID_POST_DATA = 0;
 	
 	const ERROR_FAILED_ATTEMPT = -1;
@@ -57,7 +58,7 @@ class Moneris_Result
 
 		self::ERROR_FAILED_ATTEMPT => 'Failed attempt',
 		self::ERROR_CREATE_TRANSACTION_RECORD => 'Unable to create transaction record',
-		self::ERROR_GLOBAL_ERROR_RECEIPT => 'An error has occurred',
+		self::ERROR_GLOBAL_ERROR_RECEIPT => 'An error has occurred with our payment provider',
 
 		self::ERROR_SYSTEM_UNAVAILABLE => 'Payments are temporarily unavailable',
 		self::ERROR_CARD_EXPIRED => 'Credit card expired',
@@ -80,7 +81,9 @@ class Moneris_Result
 		self::ERROR_AVS_NO_MATCH => 'Provided address did not match',
 		self::ERROR_AVS_TIMEOUT => 'Address verification timed out',
 
-		self::ERROR_POST_FRAUD => 'Suspected POST fraud'
+		self::ERROR_POST_FRAUD => 'Suspected POST fraud',
+		
+		self::ERROR => 'An error has occurred'
 		
 	);
 	

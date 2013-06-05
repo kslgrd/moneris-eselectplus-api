@@ -38,10 +38,13 @@ class Moneris
 	 *
 	 * @param array $params Associative array
 	 * 		Required keys:
-	 * 			- api_key
-	 * 			- store_id
+	 * 			- api_key string
+	 * 			- store_id string
 	 * 		Optional keys:
-	 * 			- environment
+	 * 			- environment string
+	 * 			- require_cvd bool
+	 * 			- require_avs bool
+	 * 			- avs_codes array
 	 * @return Moneris_Gateway
 	 */
 	static public function create(array $params)
@@ -51,9 +54,20 @@ class Moneris
 		
 		$params['environment'] = isset($params['environment']) ? $params['environment'] : self::ENV_LIVE;
 		
-		return new Moneris_Gateway($params['api_key'], $params['store_id'], $params['environment']);
+		$gateway = new Moneris_Gateway($params['api_key'], $params['store_id'], $params['environment']);
+		
+		if (isset($params['require_cvd'])) 
+			$gateway->require_cvd((bool) $params['require_cvd']);
+		
+		if (isset($params['require_avs'])) 
+			$gateway->require_avs((bool) $params['require_avs']);
+		
+		if (isset($params['avs_codes']))
+			$gateway->successful_avs_codes($params['avs_codes']);
+		
+		return $gateway;
 	}
 	
-	// don't all instantiation
+	// don't allow instantiation
 	protected function __construct(){ }
 }
