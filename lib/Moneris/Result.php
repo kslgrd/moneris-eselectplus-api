@@ -182,6 +182,26 @@ class Moneris_Result
 	}
 	
 	/**
+	 * Did this result pass an AVS check?
+	 *
+	 * @return bool
+	 */
+	public function passed_avs()
+	{
+		return ! $this->_failed_avs;
+	}
+	
+	/**
+	 * Did this result pass an CVD check?
+	 *
+	 * @return bool
+	 */
+	public function passed_cvd()
+	{
+		return ! $this->_failed_cvd;
+	}
+	
+	/**
 	 * Moneris reference number.
 	 *
 	 * @return void

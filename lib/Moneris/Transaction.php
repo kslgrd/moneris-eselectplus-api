@@ -318,47 +318,47 @@ class Moneris_Transaction
 			
 			// trying to make some sense of this... grouping them as best as I can:
 			switch ($receipt->ResponseCode) {
-				case 050:
-				case 074: 
+				case '050':
+				case '074': 
 					$result->error_code(Moneris_Result::ERROR_SYSTEM_UNAVAILABLE); 
 					break;
-				case 051:
-				case 482:
-				case 484: 
+				case '051':
+				case '482':
+				case '484': 
 					$result->error_code(Moneris_Result::ERROR_CARD_EXPIRED); 
 					break; 
-				case 075: 
+				case '075': 
 					$result->error_code(Moneris_Result::ERROR_INVALID_CARD); 
 					break;
-				case 076:
-				case 079:
-				case 080:
-				case 081:
-				case 082:
-				case 083: 
+				case '076':
+				case '079':
+				case '080':
+				case '081':
+				case '082':
+				case '083': 
 					$result->error_code(Moneris_Result::ERROR_INSUFFICIENT_FUNDS); 
 					break;
-				case 077: 
+				case '077': 
 					$result->error_code(Moneris_Result::ERROR_PREAUTH_FULL); 
 					break;
-				case 078: 
+				case '078': 
 					$result->error_code(Moneris_Result::ERROR_DUPLICATE_TRANSACTION); 
 					break;
-				case 481:
-				case 483: 
+				case '481':
+				case '483': 
 					$result->error_code(Moneris_Result::ERROR_DECLINED); 
 					break;
-				case 485: 
+				case '485': 
 					$result->error_code(Moneris_Result::ERROR_NOT_AUTHORIZED); 
 					break;
-				case 486: 
-				case 487: 
-				case 489: 
-				case 490: 
+				case '486': 
+				case '487': 
+				case '489': 
+				case '490': 
 					$result->failed_cvd(true);
 					$result->error_code(Moneris_Result::ERROR_CVD); 
 					break;
-				case 0: 
+				case 'null': 
 					$result->error_code(Moneris_Result::ERROR_SYSTEM_UNAVAILABLE); 
 					break;
 				default: 
@@ -373,10 +373,11 @@ class Moneris_Transaction
 		// if the transaction used AVS, we need to know if it was successful, and void the transaction if it wasn't:
 		if ($gateway->check_avs() 
 			&& isset($receipt->AvsResultCode) 
+			&& 'null' !== (string) $receipt->AvsResultCode
 			&& ! in_array($receipt->AvsResultCode, $gateway->successful_avs_codes())) {
 			
 			// see if we can't provide a nice, detailed error response:
-			switch ($response->getAvsResultCode()) {
+			switch ($receipt->AvsResultCode) {
 				case 'B':
 				case 'C': 
 					$result->error_code(Moneris_Result::ERROR_AVS_POSTAL_CODE); 
@@ -400,18 +401,18 @@ class Moneris_Transaction
 			}
 			
 			
-			return $result->failed_avs(true)->was_successful(false);
+			$result->failed_avs(true);
 			
 		}
 		
 		
 		// if the transaction used CVD, we need to know if it was successful, and void the transaction if it wasn't:
+		$result_code = isset($receipt->CvdResultCode) ? (string) $receipt->CvdResultCode : null;
 		if ($gateway->check_cvd()
-			&& isset($receipt->CvdResultCode) 
-			&& ! in_array($receipt->CvdResultCode{1}, $gateway->successful_cvd_codes())) {
+			&& ! is_null($result_code) 
+			&& ! in_array($result_code{1}, $gateway->successful_cvd_codes())) {
 				
-			$result->error_code(Moneris_Result::ERROR_CVD); 
-			return $result->failed_cvd(true)->was_successful(false);
+			$result->error_code(Moneris_Result::ERROR_CVD)->failed_cvd(true);
 		}
 
 		return $result->was_successful(true);

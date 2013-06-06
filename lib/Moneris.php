@@ -59,6 +59,9 @@ class Moneris
 		if (isset($params['require_cvd'])) 
 			$gateway->require_cvd((bool) $params['require_cvd']);
 		
+		if (isset($params['cvd_codes']))
+			$gateway->successful_cvd_codes($params['cvd_codes']);
+		
 		if (isset($params['require_avs'])) 
 			$gateway->require_avs((bool) $params['require_avs']);
 		

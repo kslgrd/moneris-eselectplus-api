@@ -103,6 +103,8 @@ class Moneris_Processor
 			return simplexml_load_string(self::$_error_response);
 		}
 		
+		//var_dump($xml);
+		
 		return $xml;
 		
 	}

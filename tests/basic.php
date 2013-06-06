@@ -10,6 +10,7 @@ require_once ROOT . '/lib/Moneris.php';
  */
 class TestBasic extends UnitTestCase
 {	
+	protected $_store = 'store3';
 	
 	/**
 	 * You can use this to only run one test at a time for debugging.
@@ -18,7 +19,7 @@ class TestBasic extends UnitTestCase
 	 */
 	public function getTests()
 	{
-		//return array("testVerify");
+		//return array("testVoid");
 		return parent::getTests();
 	}
 	
@@ -70,6 +71,7 @@ class TestBasic extends UnitTestCase
 		);
 		
 		$result = $gateway->purchase($params);
+		
 		$this->assertIsA($result, 'Moneris_Result');
 		$this->assertTrue($result->was_successful());
 		$this->assertFalse($result->failed_avs());
@@ -109,6 +111,8 @@ class TestBasic extends UnitTestCase
 		$result = $gateway->verify($params);
 		$this->assertIsA($result, 'Moneris_Result');
 		$this->assertTrue($result->was_successful());
+		$this->assertFalse($result->failed_avs());
+		$this->assertFalse($result->failed_cvd());
 	}
 	
 	public function testVoid()
@@ -134,7 +138,7 @@ class TestBasic extends UnitTestCase
 	{
 		$default_params = array(
 			'api_key' => 'yesguy',
-			'store_id' => 'store1',
+			'store_id' => $this->_store,
 			'environment' => Moneris::ENV_TESTING
 		);
 		return Moneris::create(array_merge($default_params, $params));
@@ -151,7 +155,7 @@ class TestBasic extends UnitTestCase
 		$params = array(
 			'cc_number' => '4242424242424242',
 			'order_id' => 'test' . date("dmy-G:i:s"),
-			'amount' => '20.00',
+			'amount' => '12.00',
 			'expiry_month' => date('m', $time),
 			'expiry_year' => date('y', $time)
 		);

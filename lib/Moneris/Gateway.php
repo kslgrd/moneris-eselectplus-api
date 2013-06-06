@@ -72,13 +72,13 @@ class Moneris_Gateway
 			$amount = is_null($amount) ? $transaction_number->amount() : $amount;
 			$transaction_number = $transaction_number->number();
 		}
+		// these have to be in this order!
 		$params = array(
 			'type' => 'completion',
-			'crypt_type' => 7, 
 			'order_id' => $order_id,
-			'txn_number' => $transaction_number,
 			'comp_amount' => $amount,
-			'ship_indicator' => 'wut' // what the hell? This param isn't even in the Moneris docs, but I guess it's required? Madness.
+			'txn_number' => $transaction_number,
+			'crypt_type' => 7
 		);
 
 		$transaction = $this->transaction($params);
@@ -401,10 +401,9 @@ class Moneris_Gateway
 		}
 		$params = array(
 			'type' => 'purchasecorrection',
-			'crypt_type' => 7, 
 			'order_id' => $order_id,
 			'txn_number' => $transaction_number,
-			'ship_indicator' => 'wut' // what the hell? This param isn't even in the Moneris docs, but I guess it's required? Madness.
+			'crypt_type' => 7
 		);
 
 		$transaction = $this->transaction($params);
