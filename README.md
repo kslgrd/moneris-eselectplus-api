@@ -91,6 +91,37 @@ Or:
 		// OMG we're rich!
 	}
 
+You can view the transaction details via the transaction object. 
+
+	$result = $moneris->purchase($params);
+	$transaction = $result->transaction();
+	
+You can learn some nift stuff from it, as well as see the XML returned by Moneris.
+
+	$transaction->number(); // receipt->TransID from the Moneris XML response
+	$transaction->amount(); // amount processed
+	$transaction->response(); // the SimpleXMLElement from the parsed Moneris response.
+	
+The capture, void, and refund methods can all accept a transaction object as the first param:
+
+	$result = $moneris->purchase($params);
+	$moneris->refund($result->transaction()); // refund the full purchase
+	$moneris->refund($result->transaction(), null, '5.00'); // refund $5.00
+	// OR
+	$moneris->refund($result->transaction()->number(), $params['order_id'], $params['amount']); // refund the full purchase
+	$moneris->refund($result->transaction()->number(), $params['order_id'], '5.00'); // refund $5.00
+	
+	$result = $moneris->preauth($params);
+	$moneris->capture($result->transaction());
+	// OR
+	$moneris->capture($result->transaction()->number(), $params['order_id'], $params['amount']);
+	
+	$result = $moneris->purchase($params);
+	$moneris->void($result->transaction());
+	// OR
+	$moneris->void($result->transaction()->number(), $params['order_id']);
+	
+
 Lemme know if you have any questions. @ironkeith on the Twitters.
 	
 	
