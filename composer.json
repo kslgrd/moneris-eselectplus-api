@@ -1,8 +1,8 @@
 {
-    "name": "ironkeith/Moneris-eSELECTplus-API",
+    "name": "ironkeith/moneris-eselectplus-api",
     "description": "A much less awful way to access the Moneris eSELECTplus API.",
     "keywords": ["moneris", "eSELECTplus"],
-    "homepage": "https://github.com/ironkeith/Moneris-eSELECTplus-API",
+    "homepage": "https://github.com/ironkeith/moneris-eselectplus-api",
     "license": "MIT",
     "require": {
         "php": ">=5.2.4"
