@@ -44,6 +44,62 @@ class Moneris_Gateway
 	}
 	
 	/**
+	 * Verify a 3D Secure for Visa/Mastercard.
+	 *
+	 * @param array $params An associative array.
+	 * 		Required:
+	 *			- PaRes string No idea what this is, but it's a mess of chars.
+	 * 			- MD string Information that will be returned to allow you to process the response
+	 * @return Moneris_3DSecureResult
+	 */
+	public function acs(array $params)
+	{
+		$params['type'] = 'acs';
+		$transaction = $this->transaction($params);
+	 	return $this->_process($transaction);
+	}
+	
+	/**
+	 * Make a purchase.
+	 *
+	 * @param array $params An associative array.
+	 * 		Required:
+	 *			- order_id string A unique transaction ID, up to 50 chars
+	 * 			- cc_number int Any non-numeric characters will be stripped
+	 *			- amount float 
+	 * 			- cavv
+	 * 			- expdate int 4 digit date YYMM 
+	 * 			OR
+	 *			- expiry_month int 2 digit representation of the expiry month (01-12)
+	 * 			- expiry_year int last two digits of the expiry year
+	 * 		Required (if AVS is enabled):
+	 * 			- avs_street_number string Up to 19 chars combined with street name
+	 *			- avs_street_name string 
+	 * 			- avs_zipcode string Up to 10 chars
+	 * 		Optional (if AVS is enabled, Amex/JCB only): 
+	 * 			- avs_email string Up to 60 chars
+	 *			- avs_hostname string Up to 60 chars
+	 * 			- avs_browser string Up to 60 chars
+	 * 			- avs_shiptocountry string 3 chars
+	 *			- avs_method string string 2 chars
+	 * 			- avs_merchprodsku string Up to 15 chars
+	 * 			- avs_custip string 15 chars
+	 * 			- avs_custphone int 10 digits
+	 * 		Required (id CVD is enabled):
+	 *			- cvd
+	 * 		Optional:
+	 *			- description string A description of the purchase, up to 20 chars
+	 *			- cust_id string An identifier for the customer, up to 50 chars
+	 * @return Moneris_Result
+	 */
+	public function cavv_purchase(array $params)
+	{
+		$params['type'] = 'cavv_purchase';
+		$transaction = $this->transaction($params);
+	 	return $this->_process($transaction);
+	}
+	
+	/**
 	 * Set/get the API key.
 	 *
 	 * @param string $key Optional. If provided, set the value for the key.
@@ -331,6 +387,40 @@ class Moneris_Gateway
 		if (is_null($this->_transaction) || ! is_null($params))
 			return $this->_transaction = new Moneris_Transaction($this, $params);
 		return $this->_transaction;
+	}
+	
+	/**
+	 * Perform a 3D Secure verification for Visa/Mastercard.
+	 * I guess this will fail spectacularly if you try it with Amex, etc, so don't. 
+	 *
+	 * @param array $params An associative array.
+	 * 		Required:
+	 *			- xid|order_id string A unique transaction ID, up to 50 chars. Use either key, but not both.
+	 * 			- cc_number int Any non-numeric characters will be stripped
+	 *			- amount float 
+	 * 			- expdate int 4 digit date YYMM 
+	 * 			- MD string Information that will be returned to allow you to process the response
+	 *			- merchantUrl string URL responses will be sent to
+	 * 		Optional (will be added if you skip them):
+	 *			- accept string MIME types accepted by the browser
+	 *			- userAgent string Browser user-agent
+	 * @return Moneris_3DSecureResult
+	 */
+	public function txn(array $params)
+	{
+		$params['type'] = 'txn';
+		if (! isset($params['accept']))
+			$params['accept'] = $_SERVER['HTTP_ACCEPT'];
+		if (! isset($params['userAgent']))
+			$params['userAgent'] = $_SERVER['HTTP_USER_AGENT'];
+		
+		if (isset($params['order_id'])) {
+			$params['xid'] = $params['order_id'];
+			unset($params['order_id']);
+		}
+
+		$transaction = $this->transaction($params);
+	 	return $this->_process($transaction);
 	}
 	
 	/**

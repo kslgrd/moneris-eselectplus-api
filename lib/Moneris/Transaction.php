@@ -68,6 +68,7 @@ class Moneris_Transaction
 		
 		if (isset ($params['type'])) {
 			switch ($params['type']) {
+				case 'cavv_purchase':
 				case 'purchase':
 				case 'preauth':
 				case 'card_verification':
@@ -110,7 +111,38 @@ class Moneris_Transaction
 					if (! isset($params['order_id']) || '' == $params['order_id']) $errors[] = 'Order ID not provided';
 					if (! isset($params['txn_number']) || '' == $params['txn_number']) $errors[] = 'Transaction number not provided';
 					break;
+				case 'txn':
+					if (! isset($params['xid'])) $errors[] = 'Order ID not provided';
+					if (! isset($params['pan'])) $errors[] = 'Credit card number not provided';
+					if (! isset($params['amount'])) $errors[] = 'Amount not provided';
+					if (! isset($params['expdate'])) $errors[] = 'Expiry date not provided';
+					if (! isset($params['MD'])) $errors[] = 'Merchant details "MD" not provided';
+					if (! isset($params['merchantUrl'])) $errors[] = 'Merchant URL not provided';
 					
+					// force the sort here... because why not... fuck it, I give up. Moneris are just the fucking worst, and I 
+					// have lost my will to try and program well around their insanity.
+					$this->_params = array(
+						'type' => 'txn',
+						'xid' => $params['xid'],
+						'amount' => $params['amount'],
+						'pan' => $params['pan'],
+						'expdate' => $params['expdate'],
+						'MD' => $params['MD'],
+						'merchantUrl' => $params['merchantUrl'],
+						'accept' => $params['accept'],
+						'userAgent' => $params['userAgent'],
+						// params that go unmentioned in the docs, but are seemingly required?
+						'currency' => ' ',
+						'recurFreq' => ' ',
+						'recurEnd' => ' ',
+						'install' => ' '
+					);
+					
+					break;
+				case 'acs':
+					if (! isset($params['PaRes'])) $errors[] = 'PaRes not provided';
+					if (! isset($params['MD'])) $errors[] = 'Merchant details "MD" not provided';
+					break;
 				default:
 					$errors[] = $params['type'] . ' is not a support transaction type';
 			}
@@ -205,6 +237,11 @@ class Moneris_Transaction
 			if ('' == $params[$k]) unset($params[$k]); // remove optional params
 		}
 		
+		// amount has to include a penny value, or the transaction will fail:
+		if (isset($params['amount']) && false === strpos($params['amount'], '.')) {
+			$params['amount'] .= '.00';
+		}
+		
 		if (isset($params['cc_number'])) {
 			$params['pan'] = preg_replace('/\D/', '', $params['cc_number']);
 			unset($params['cc_number']);
@@ -239,16 +276,6 @@ class Moneris_Transaction
 	}
 	
 	/**
-	 * Get the result for this transaction.
-	 *
-	 * @return Moneris_Result
-	 */
-	public function result()
-	{
-		
-	}
-	
-	/**
 	 * Convert the transaction params into XML.
 	 *
 	 * @return string XML formatted transaction params
@@ -258,21 +285,26 @@ class Moneris_Transaction
 		$gateway = $this->gateway();
 		$params = $this->params();
 		
-		$xml = new SimpleXMLElement('<request/>');
+		// starting to get UGLY...
+		$request_type = in_array($params['type'], array('txn', 'acs')) ? 'MpiRequest' : 'request';
+		
+		$xml = new SimpleXMLElement("<$request_type/>");
 		$xml->addChild('store_id', $gateway->store_id());
 		$xml->addChild('api_token', $gateway->api_key());
 		
 		$type = $xml->addChild($params['type']);
+		$type_allows_efraud = in_array($params['type'], array('purchase', 'preauth', 'card_verification', 'cavv_purchase', 'cavv_preauth'));
+		// prevent type from being included below when we all all of the optional params:
 		unset($params['type']);
-
-		if ($gateway->check_cvd()) {
+		
+		if ($gateway->check_cvd() && $type_allows_efraud) {
 			$cvd = $type->addChild('cvd_info');
 			$cvd->addChild('cvd_indicator', '1');
 			$cvd->addChild('cvd_value', $params['cvd']);
 			unset($params['cvd']);
 		}
 		
-		if ($gateway->check_avs()) {
+		if ($gateway->check_avs() && $type_allows_efraud) {
 			$avs = $type->addChild('avs_info');
 			foreach ($params as $key => $value) {
 				if (substr($key, 0, 4) != 'avs_')
@@ -283,6 +315,7 @@ class Moneris_Transaction
 			
 		}
 		
+		// include all optional params:
 		foreach ($params as $key => $value) {
 			$type->addChild($key, $value);
 		}
@@ -298,125 +331,10 @@ class Moneris_Transaction
 	 */
 	public function validate_response(SimpleXMLElement $response)
 	{
-		//var_dump($response);
 		$this->response($response);
-		$result = new Moneris_Result($this);
-		$receipt = $response->receipt;
-		$gateway = $this->gateway();
-	
-		// did the transaction go through?
-		if ('Global Error Receipt' == $receipt->ReceiptId) {
-
-			$result->error_code(Moneris_Result::ERROR_GLOBAL_ERROR_RECEIPT)
-				->was_successful(false);
-			return $result;
-		}
-		
-		// was it a successful transaction?
-		// any response code greater than 49 is an error code:
-		if ((int) $receipt->ResponseCode >= 50 || (int) $receipt->ResponseCode == 0) {
-			
-			// trying to make some sense of this... grouping them as best as I can:
-			switch ($receipt->ResponseCode) {
-				case '050':
-				case '074': 
-					$result->error_code(Moneris_Result::ERROR_SYSTEM_UNAVAILABLE); 
-					break;
-				case '051':
-				case '482':
-				case '484': 
-					$result->error_code(Moneris_Result::ERROR_CARD_EXPIRED); 
-					break; 
-				case '075': 
-					$result->error_code(Moneris_Result::ERROR_INVALID_CARD); 
-					break;
-				case '076':
-				case '079':
-				case '080':
-				case '081':
-				case '082':
-				case '083': 
-					$result->error_code(Moneris_Result::ERROR_INSUFFICIENT_FUNDS); 
-					break;
-				case '077': 
-					$result->error_code(Moneris_Result::ERROR_PREAUTH_FULL); 
-					break;
-				case '078': 
-					$result->error_code(Moneris_Result::ERROR_DUPLICATE_TRANSACTION); 
-					break;
-				case '481':
-				case '483': 
-					$result->error_code(Moneris_Result::ERROR_DECLINED); 
-					break;
-				case '485': 
-					$result->error_code(Moneris_Result::ERROR_NOT_AUTHORIZED); 
-					break;
-				case '486': 
-				case '487': 
-				case '489': 
-				case '490': 
-					$result->failed_cvd(true);
-					$result->error_code(Moneris_Result::ERROR_CVD); 
-					break;
-				case 'null': 
-					$result->error_code(Moneris_Result::ERROR_SYSTEM_UNAVAILABLE); 
-					break;
-				default: 
-					$result->error_code(Moneris_Result::ERROR); 
-
-			}
-			
-			return $result->was_successful(false);
-			
-		}
-		
-		// if the transaction used AVS, we need to know if it was successful, and void the transaction if it wasn't:
-		if ($gateway->check_avs() 
-			&& isset($receipt->AvsResultCode) 
-			&& 'null' !== (string) $receipt->AvsResultCode
-			&& ! in_array($receipt->AvsResultCode, $gateway->successful_avs_codes())) {
-			
-			// see if we can't provide a nice, detailed error response:
-			switch ($receipt->AvsResultCode) {
-				case 'B':
-				case 'C': 
-					$result->error_code(Moneris_Result::ERROR_AVS_POSTAL_CODE); 
-					break;
-				case 'G':
-				case 'I': 
-				case 'P': 
-				case 'S':
-				case 'U': 
-				case 'Z': 
-					$result->error_code(Moneris_Result::ERROR_AVS_ADDRESS); 
-					break;
-				case 'N': 
-					$result->error_code(Moneris_Result::ERROR_AVS_NO_MATCH); 
-					break;
-				case 'R': 
-					$result->error_code(Moneris_Result::ERROR_AVS_TIMEOUT); 
-					break;
-				default: 
-					$result->error_code(Moneris_Result::ERROR_AVS);
-			}
-			
-			
-			$result->failed_avs(true);
-			
-		}
-		
-		
-		// if the transaction used CVD, we need to know if it was successful, and void the transaction if it wasn't:
-		$result_code = isset($receipt->CvdResultCode) ? (string) $receipt->CvdResultCode : null;
-		if ($gateway->check_cvd()
-			&& ! is_null($result_code) 
-			&& ! in_array($result_code{1}, $gateway->successful_cvd_codes())) {
-				
-			$result->error_code(Moneris_Result::ERROR_CVD)->failed_cvd(true);
-		}
-
-		return $result->was_successful(true);
-		
+		$result = Moneris_Result::factory($this);
+		$result->validate_response();
+		return $result;
 	}
 	
 }

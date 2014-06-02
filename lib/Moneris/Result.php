@@ -81,11 +81,11 @@ class Moneris_Result
 		self::ERROR_DECLINED => 'Declined',
 		self::ERROR_NOT_AUTHORIZED => 'Not authorized',
 
-		self::ERROR_CVD => 'Invalid CVD provided',
-		self::ERROR_CVD_NO_MATCH => 'Provided CVD did not match',
-		self::ERROR_CVD_NOT_PROCESSED => 'CVD not processed',
-		self::ERROR_CVD_MISSING => 'CVD not provided',
-		self::ERROR_CVD_NOT_SUPPORTED => 'CVD not supported',
+		self::ERROR_CVD => 'Invalid security code provided',
+		self::ERROR_CVD_NO_MATCH => 'Provided security code did not match',
+		self::ERROR_CVD_NOT_PROCESSED => 'Security code not processed',
+		self::ERROR_CVD_MISSING => 'Security code not provided',
+		self::ERROR_CVD_NOT_SUPPORTED => 'Security code not supported',
 
 		self::ERROR_AVS => 'Address verification failed',
 		self::ERROR_AVS_POSTAL_CODE => 'Incorrect postal code supplied',
@@ -110,6 +110,20 @@ class Moneris_Result
 	public function __construct(Moneris_Transaction $transaction)
 	{
 		$this->_transaction = $transaction;
+	}
+
+	/**
+	 * Return the appropriate result type based off of the transaction.
+	 * @return Moneris_Result|Moneris_3DSecureResult
+	 */
+	static public function factory(Moneris_Transaction $transaction)
+	{
+		$params = $transaction->params();
+		if (in_array($params['type'], array('txn', 'acs'))) {
+			return new Moneris_3DSecureResult($transaction);
+		} else {
+			return new Moneris_Result($transaction);
+		}
 	}
 
 	/**
@@ -209,7 +223,18 @@ class Moneris_Result
 	 */
 	public function reference_number()
 	{
-		return $this->transaction()->response()->receipt->ReferenceNum;
+		$response = $this->transaction()->response();
+		return is_null($response) ? '' : $response->receipt->ReferenceNum;
+	}
+	
+	/**
+	 * The response from Moneris.
+	 *
+	 * @return SimpleXmlObject
+	 */
+	public function response()
+	{
+		return $this->transaction()->response();
 	}
 	
 	/**
@@ -219,7 +244,8 @@ class Moneris_Result
 	 */
 	public function response_code()
 	{
-		return $this->transaction()->response()->receipt->ResponseCode;
+		$response = $this->transaction()->response();
+		return is_null($response) ? '' : $response->receipt->ResponseCode;
 	}
 	
 	/**
@@ -229,7 +255,8 @@ class Moneris_Result
 	 */
 	public function response_message()
 	{
-		return $this->transaction()->response()->receipt->Message;
+		$response = $this->transaction()->response();
+		return is_null($response) ? '' : $response->receipt->Message;
 	}
 	
 	/**
@@ -245,6 +272,130 @@ class Moneris_Result
 			return $this;
 		}
 		return $this->_transaction;
+	}
+	
+	/**
+	 * Validate the response from Moneris to see if it was successful.
+	 *
+	 * @return Moneris_Result
+	 */
+	public function validate_response()
+	{
+		$receipt = $this->transaction()->response()->receipt;
+		$gateway = $this->transaction()->gateway();
+	
+		// did the transaction go through?
+		if ('Global Error Receipt' == $receipt->ReceiptId) {
+
+			$this->error_code(Moneris_Result::ERROR_GLOBAL_ERROR_RECEIPT)
+				->was_successful(false);
+			return $this;
+		}
+		
+		// was it a successful transaction?
+		// any response code greater than 49 is an error code:
+		if ((int) $receipt->ResponseCode >= 50 || (int) $receipt->ResponseCode == 0) {
+			
+			// trying to make some sense of this... grouping them as best as I can:
+			switch ($receipt->ResponseCode) {
+				case '050':
+				case '074': 
+				case 'null': 
+					$this->error_code(Moneris_Result::ERROR_SYSTEM_UNAVAILABLE); 
+					break;
+				case '051':
+				case '482':
+				case '484': 
+					$this->error_code(Moneris_Result::ERROR_CARD_EXPIRED); 
+					break; 
+				case '075': 
+					$this->error_code(Moneris_Result::ERROR_INVALID_CARD); 
+					break;
+				case '076':
+				case '079':
+				case '080':
+				case '081':
+				case '082':
+				case '083': 
+					$this->error_code(Moneris_Result::ERROR_INSUFFICIENT_FUNDS); 
+					break;
+				case '077': 
+					$this->error_code(Moneris_Result::ERROR_PREAUTH_FULL); 
+					break;
+				case '078': 
+					$this->error_code(Moneris_Result::ERROR_DUPLICATE_TRANSACTION); 
+					break;
+				case '481':
+				case '483': 
+					$this->error_code(Moneris_Result::ERROR_DECLINED); 
+					break;
+				case '485': 
+					$this->error_code(Moneris_Result::ERROR_NOT_AUTHORIZED); 
+					break;
+				case '486': 
+				case '487': 
+				case '489': 
+				case '490': 
+					$this->failed_cvd(true);
+					$this->error_code(Moneris_Result::ERROR_CVD); 
+					break;
+				default: 
+					$this->error_code(Moneris_Result::ERROR); 
+
+			}
+			
+			return $this->was_successful(false);
+			
+		}
+		
+		// if the transaction used AVS, we need to know if it was successful, and void the transaction if it wasn't:
+		if ($gateway->check_avs() 
+			&& isset($receipt->AvsResultCode) 
+			&& 'null' !== (string) $receipt->AvsResultCode
+			&& ! in_array($receipt->AvsResultCode, $gateway->successful_avs_codes())) {
+			
+			// see if we can't provide a nice, detailed error response:
+			switch ($receipt->AvsResultCode) {
+				case 'B':
+				case 'C': 
+					$this->error_code(Moneris_Result::ERROR_AVS_POSTAL_CODE); 
+					break;
+				case 'G':
+				case 'I': 
+				case 'P': 
+				case 'S':
+				case 'U': 
+				case 'Z': 
+					$this->error_code(Moneris_Result::ERROR_AVS_ADDRESS); 
+					break;
+				case 'N': 
+					$this->error_code(Moneris_Result::ERROR_AVS_NO_MATCH); 
+					break;
+				case 'R': 
+					$this->error_code(Moneris_Result::ERROR_AVS_TIMEOUT); 
+					break;
+				default: 
+					$this->error_code(Moneris_Result::ERROR_AVS);
+			}
+			
+			
+			$this->failed_avs(true);
+			return $this->was_successful(false);
+		}
+		
+		
+		// if the transaction used CVD, we need to know if it was successful, and void the transaction if it wasn't:
+		$this_code = isset($receipt->CvdResultCode) ? (string) $receipt->CvdResultCode : null;
+		if ($gateway->check_cvd()
+			&& ! is_null($this_code) 
+			&& 'null' !== $this_code
+			&& ! in_array($this_code{1}, $gateway->successful_cvd_codes())) {
+				
+			$this->error_code(Moneris_Result::ERROR_CVD)->failed_cvd(true);
+			return $this->was_successful(false);
+		}
+
+		return $this->was_successful(true);
 	}
 	
 	/**

@@ -67,13 +67,18 @@ class Moneris_Processor
 	{
 		$gateway = $transaction->gateway();
 		$config = self::config($gateway->environment());
+		$params = $transaction->params();
+		// frig... this MPI stuff is leaking gross code everywhere... needs to be refactored
+		if (in_array($params['type'], array('txn', 'acs'))) 
+			$config['url'] = '/mpi/servlet/MpiServlet';
 		
 		$url = $config['protocol'] . '://' .
 			   $config['host'] . ':' .
 			   $config['port'] .
 			   $config['url'];
 		
-		$xml = $transaction->to_xml();
+		$xml = str_replace(' </', '</', $transaction->to_xml());
+		
 		//var_dump($xml);
 		
 		// this is pulled directly from mpgClasses.php
@@ -102,6 +107,11 @@ class Moneris_Processor
 		if ($xml === false) {
 			return simplexml_load_string(self::$_error_response);
 		}
+		// force fail AVS for testing
+		//$xml->receipt->AvsResultCode = 'N';
+		
+		// force fail CVD for testing
+		//$xml->receipt->CvdResultCode = '1N';
 		
 		//var_dump($xml);
 		
