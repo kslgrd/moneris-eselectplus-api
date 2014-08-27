@@ -1,40 +1,40 @@
 <?php
 class Moneris_Gateway
-{	
+{
 	protected $_api_key;
-	
+
 	protected $_store_id;
-	
+
 	protected $_environment;
-	
+
 	protected $_test_mode = false;
-	
+
 	protected $_require_avs = false;
-	
+
 	/**
 	 * Codes that we're willing to accept for AVS.
 	 * @var array
 	 */
 	protected $_successful_avs_codes = array('A','B', 'D', 'M', 'P', 'W', 'X', 'Y', 'Z');
-	
+
 	/**
 	 * Codes that we're willing to accept for CVD.
 	 * @var array
 	 */
 	protected $_successful_cvd_codes = array('M', 'Y', 'P', 'S', 'U');
-	
+
 	protected $_require_cvd = true;
-	
+
 	/**
 	 * Transaction object.
 	 * @var Moneris_Transaction
 	 */
 	protected $_transaction = null;
-	
+
 	/**
-	 * @param string $api_key 
-	 * @param string $store_id 
-	 * @param string $environment 
+	 * @param string $api_key
+	 * @param string $store_id
+	 * @param string $environment
 	 */
 	function __construct($api_key, $store_id, $environment = 'live')
 	{
@@ -42,7 +42,7 @@ class Moneris_Gateway
 		$this->_store_id = $store_id;
 		$this->_environment = $environment;
 	}
-	
+
 	/**
 	 * Verify a 3D Secure for Visa/Mastercard.
 	 *
@@ -58,7 +58,7 @@ class Moneris_Gateway
 		$transaction = $this->transaction($params);
 	 	return $this->_process($transaction);
 	}
-	
+
 	/**
 	 * Make a purchase.
 	 *
@@ -66,17 +66,17 @@ class Moneris_Gateway
 	 * 		Required:
 	 *			- order_id string A unique transaction ID, up to 50 chars
 	 * 			- cc_number int Any non-numeric characters will be stripped
-	 *			- amount float 
+	 *			- amount float
 	 * 			- cavv
-	 * 			- expdate int 4 digit date YYMM 
+	 * 			- expdate int 4 digit date YYMM
 	 * 			OR
 	 *			- expiry_month int 2 digit representation of the expiry month (01-12)
 	 * 			- expiry_year int last two digits of the expiry year
 	 * 		Required (if AVS is enabled):
 	 * 			- avs_street_number string Up to 19 chars combined with street name
-	 *			- avs_street_name string 
+	 *			- avs_street_name string
 	 * 			- avs_zipcode string Up to 10 chars
-	 * 		Optional (if AVS is enabled, Amex/JCB only): 
+	 * 		Optional (if AVS is enabled, Amex/JCB only):
 	 * 			- avs_email string Up to 60 chars
 	 *			- avs_hostname string Up to 60 chars
 	 * 			- avs_browser string Up to 60 chars
@@ -98,7 +98,7 @@ class Moneris_Gateway
 		$transaction = $this->transaction($params);
 	 	return $this->_process($transaction);
 	}
-	
+
 	/**
 	 * Set/get the API key.
 	 *
@@ -113,11 +113,11 @@ class Moneris_Gateway
 		}
 		return $this->_api_key;
 	}
-	
+
 	/**
 	 * Capture a pre-authorized transaction.
 	 *
-	 * @param string|Moneris_Transation $transaction_number 
+	 * @param string|Moneris_Transation $transaction_number
 	 * @param string $order_id Required if first param isn't an instance of Moneris_Transation
 	 * @return void
 	 */
@@ -140,8 +140,8 @@ class Moneris_Gateway
 		$transaction = $this->transaction($params);
 	 	return $this->_process($transaction);
 	}
-	
-	
+
+
 	/**
 	 * Are we using AVS?
 	 *
@@ -151,7 +151,7 @@ class Moneris_Gateway
 	{
 		return $this->_require_avs;
 	}
-	
+
 	/**
 	 * Do the CVD digits need to be checked?
 	 *
@@ -161,11 +161,11 @@ class Moneris_Gateway
 	{
 		return $this->_require_cvd;
 	}
-	
+
 	/**
 	 * Get/set the API environment.
 	 *
-	 * @param string $environment 
+	 * @param string $environment
 	 * @return void
 	 * @author Keith Silgard
 	 */
@@ -177,12 +177,12 @@ class Moneris_Gateway
 		}
 		return $this->_environment;
 	}
-	
+
 	public function errors()
 	{
 		return $this->transaction()->errors();
 	}
-	
+
 	/**
 	 * Pre-authorize a purchase.
 	 *
@@ -190,16 +190,16 @@ class Moneris_Gateway
 	 * 		Required:
 	 *			- order_id string A unique transaction ID, up to 50 chars
 	 * 			- cc_number int Any non-numeric characters will be stripped
-	 *			- amount float 
-	 * 			- expdate int 4 digit date YYMM 
+	 *			- amount float
+	 * 			- expdate int 4 digit date YYMM
 	 * 			OR
 	 *			- expiry_month int 2 digit representation of the expiry month (01-12)
 	 * 			- expiry_year int last two digits of the expiry year
 	 * 		Required (if AVS is enabled):
 	 * 			- avs_street_number string Up to 19 chars combined with street name
-	 *			- avs_street_name string 
+	 *			- avs_street_name string
 	 * 			- avs_zipcode string Up to 10 chars
-	 * 		Optional (if AVS is enabled, Amex/JCB only): 
+	 * 		Optional (if AVS is enabled, Amex/JCB only):
 	 * 			- avs_email string Up to 60 chars
 	 *			- avs_hostname string Up to 60 chars
 	 * 			- avs_browser string Up to 60 chars
@@ -222,7 +222,7 @@ class Moneris_Gateway
 		$transaction = $this->transaction($params);
 	 	return $this->_process($transaction);
 	}
-	
+
 	/**
 	 * Make a purchase.
 	 *
@@ -230,16 +230,16 @@ class Moneris_Gateway
 	 * 		Required:
 	 *			- order_id string A unique transaction ID, up to 50 chars
 	 * 			- cc_number int Any non-numeric characters will be stripped
-	 *			- amount float 
-	 * 			- expdate int 4 digit date YYMM 
+	 *			- amount float
+	 * 			- expdate int 4 digit date YYMM
 	 * 			OR
 	 *			- expiry_month int 2 digit representation of the expiry month (01-12)
 	 * 			- expiry_year int last two digits of the expiry year
 	 * 		Required (if AVS is enabled):
 	 * 			- avs_street_number string Up to 19 chars combined with street name
-	 *			- avs_street_name string 
+	 *			- avs_street_name string
 	 * 			- avs_zipcode string Up to 10 chars
-	 * 		Optional (if AVS is enabled, Amex/JCB only): 
+	 * 		Optional (if AVS is enabled, Amex/JCB only):
 	 * 			- avs_email string Up to 60 chars
 	 *			- avs_hostname string Up to 60 chars
 	 * 			- avs_browser string Up to 60 chars
@@ -262,16 +262,16 @@ class Moneris_Gateway
 		$transaction = $this->transaction($params);
 	 	return $this->_process($transaction);
 	}
-	
+
 	public function reauth()
 	{
-		
+
 	}
-	
+
 	/**
 	 * Refund a transaction.
 	 *
-	 * @param string|Moneris_Transation $transaction_number 
+	 * @param string|Moneris_Transation $transaction_number
 	 * @param string $order_id Required if first param isn't an instance of Moneris_Transation
 	 * @return void
 	 */
@@ -294,18 +294,18 @@ class Moneris_Gateway
 		$transaction = $this->transaction($params);
 	 	return $this->_process($transaction);
 	}
-	
-	
+
+
 	public function result()
 	{
 		return $this->transaction()->result();
 	}
-	
+
 	/**
 	 * Require address verification.
 	 * Transaction will require additional AVS params.
 	 *
-	 * @param bool $require_it 
+	 * @param bool $require_it
 	 * @return Moneris_Gateway Fluid interface
 	 * @author Keith Silgard
 	 */
@@ -314,12 +314,12 @@ class Moneris_Gateway
 		$this->_require_avs = $require_it;
 		return $this;
 	}
-	
+
 	/**
 	 * Require card validation digits.
 	 * Transaction will require additional CVD params.
 	 *
-	 * @param bool $require_it 
+	 * @param bool $require_it
 	 * @return Moneris_Gateway Fluid interface
 	 * @author Keith Silgard
 	 */
@@ -328,7 +328,7 @@ class Moneris_Gateway
 		$this->_require_cvd = $require_it;
 		return $this;
 	}
-	
+
 	/**
 	 * Set/get the store ID.
 	 *
@@ -343,11 +343,11 @@ class Moneris_Gateway
 		}
 		return $this->_store_id;
 	}
-	
+
 	/**
 	 * Get or set the AVS codes we'll use to determine a successful transaction.
 	 *
-	 * @param array $codes 
+	 * @param array $codes
 	 * @return array|Moneris_Gateway Fluid interface for set operations
 	 * @author Keith Silgard
 	 */
@@ -359,11 +359,11 @@ class Moneris_Gateway
 		}
 		return $this->_successful_avs_codes;
 	}
-	
+
 	/**
 	 * Get or set the CVD codes we'll use to determine a successful transaction.
 	 *
-	 * @param array $codes 
+	 * @param array $codes
 	 * @return array|Moneris_Gateway Fluid interface for set operations
 	 * @author Keith Silgard
 	 */
@@ -375,7 +375,7 @@ class Moneris_Gateway
 		}
 		return $this->_successful_cvd_codes;
 	}
-	
+
 	/**
 	 * Get a transaction object!
 	 *
@@ -388,17 +388,17 @@ class Moneris_Gateway
 			return $this->_transaction = new Moneris_Transaction($this, $params);
 		return $this->_transaction;
 	}
-	
+
 	/**
 	 * Perform a 3D Secure verification for Visa/Mastercard.
-	 * I guess this will fail spectacularly if you try it with Amex, etc, so don't. 
+	 * I guess this will fail spectacularly if you try it with Amex, etc, so don't.
 	 *
 	 * @param array $params An associative array.
 	 * 		Required:
 	 *			- xid|order_id string A unique transaction ID, up to 50 chars. Use either key, but not both.
 	 * 			- cc_number int Any non-numeric characters will be stripped
-	 *			- amount float 
-	 * 			- expdate int 4 digit date YYMM 
+	 *			- amount float
+	 * 			- expdate int 4 digit date YYMM
 	 * 			- MD string Information that will be returned to allow you to process the response
 	 *			- merchantUrl string URL responses will be sent to
 	 * 		Optional (will be added if you skip them):
@@ -413,7 +413,7 @@ class Moneris_Gateway
 			$params['accept'] = $_SERVER['HTTP_ACCEPT'];
 		if (! isset($params['userAgent']))
 			$params['userAgent'] = $_SERVER['HTTP_USER_AGENT'];
-		
+
 		if (isset($params['order_id'])) {
 			$params['xid'] = $params['order_id'];
 			unset($params['order_id']);
@@ -422,12 +422,12 @@ class Moneris_Gateway
 		$transaction = $this->transaction($params);
 	 	return $this->_process($transaction);
 	}
-	
+
 	/**
 	 * Whether or not we're running tests!
 	 * For unit tests only, not the Moneris staging server tests.
 	 *
-	 * @param bool $use_it 
+	 * @param bool $use_it
 	 * @return Moneris Fluid interface
 	 */
 	public function use_test_mode($use_it = true)
@@ -435,7 +435,7 @@ class Moneris_Gateway
 		$this->_test_mode = $use_it;
 		return $this;
 	}
-	
+
 	/**
 	 * Validate CVD and or AVS prior to attempting a purchase.
 	 *
@@ -443,16 +443,16 @@ class Moneris_Gateway
 	 * 		Required:
 	 *			- order_id string A unique transaction ID, up to 50 chars
 	 * 			- cc_number int Any non-numeric characters will be stripped
-	 *			- amount float 
-	 * 			- expdate int 4 digit date YYMM 
+	 *			- amount float
+	 * 			- expdate int 4 digit date YYMM
 	 * 			OR
 	 *			- expiry_month int 2 digit representation of the expiry month (01-12)
 	 * 			- expiry_year int last two digits of the expiry year
 	 * 		Required (if AVS is enabled):
 	 * 			- avs_street_number string Up to 19 chars combined with street name
-	 *			- avs_street_name string 
+	 *			- avs_street_name string
 	 * 			- avs_zipcode string Up to 10 chars
-	 * 		Optional (if AVS is enabled, Amex/JCB only): 
+	 * 		Optional (if AVS is enabled, Amex/JCB only):
 	 * 			- avs_email string Up to 60 chars
 	 *			- avs_hostname string Up to 60 chars
 	 * 			- avs_browser string Up to 60 chars
@@ -475,11 +475,11 @@ class Moneris_Gateway
 		$transaction = $this->transaction($params);
 	 	return $this->_process($transaction);
 	}
-	
+
 	/**
 	 * Void a transaction.
 	 *
-	 * @param string|Moneris_Transation $transaction_number 
+	 * @param string|Moneris_Transation $transaction_number
 	 * @param string $order_id Required if first param isn't an instance of Moneris_Transation
 	 * @return void
 	 */
@@ -499,16 +499,16 @@ class Moneris_Gateway
 		$transaction = $this->transaction($params);
 	 	return $this->_process($transaction);
 	}
-	
+
 	/**
 	 * Submit a transaction to the Moneris API and see how it works out!
 	 *
-	 * @param Moneris_Transaction $transaction 
+	 * @param Moneris_Transaction $transaction
 	 * @return Moneris_Result
 	 */
 	protected function _process(Moneris_Transaction $transaction)
 	{
 		return Moneris_Processor::process($transaction);
 	}
-	
+
 }

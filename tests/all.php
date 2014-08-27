@@ -1,4 +1,4 @@
-<?php 
+<?php
 /**
  * To run these tests:
  *
@@ -6,7 +6,7 @@
  * - Pop open a terminal
  * - Navigate to the tests folder
  * - run: php all_tests.php (or php-mamp all_tests.php if you're using MAMP)
- * 
+ *
  * I guess you can also run these in a GUI... but I never even tried so I don't know if it works.
  */
 if (! defined('ROOT')) {
@@ -15,7 +15,7 @@ if (! defined('ROOT')) {
 require_once ROOT . '/simpletest/autorun.php';
 require_once ROOT . '/lib/Moneris.php';
 
-class AllTests extends TestSuite 
+class AllTests extends TestSuite
 {
 	function __construct() {
 		parent::__construct();
