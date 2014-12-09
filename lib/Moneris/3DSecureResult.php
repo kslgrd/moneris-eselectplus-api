@@ -104,7 +104,7 @@ class Moneris_3DSecureResult extends Moneris_Result
 	public function value()
 	{
 		$response = $this->response();
-		$value = isset($response->PaReq) ? $response->PaReq : $response->cavv;
+		$value = isset($response->PaReq) && 'null' != $response->PaReq ? $response->PaReq : $response->cavv;
 		return (string) $value;
 	}
 }
