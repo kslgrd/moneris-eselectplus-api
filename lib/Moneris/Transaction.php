@@ -101,7 +101,7 @@ class Moneris_Transaction
 					break;
 
 				case 'completion':
-					if (! isset($params['comp_amount']) || '' == $params['comp_amount']) $errors[] = 'Amount not provided';
+					if (! isset($params['comp_amount']) || '' === $params['comp_amount']) $errors[] = 'Amount not provided';
 					if (! isset($params['order_id']) || '' == $params['order_id']) $errors[] = 'Order ID not provided';
 					if (! isset($params['txn_number']) || '' == $params['txn_number']) $errors[] = 'Transaction number not provided';
 					break;
