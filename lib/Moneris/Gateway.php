@@ -193,6 +193,9 @@ class Moneris_Gateway
 	 *			- amount float
 	 * 			- expdate int 4 digit date YYMM
 	 * 			OR
+	 *			- data_key string A token/data key, used with Hosted Tokenization
+	 *			- amount float
+	 * 			OR
 	 *			- expiry_month int 2 digit representation of the expiry month (01-12)
 	 * 			- expiry_year int last two digits of the expiry year
 	 * 		Required (if AVS is enabled):
@@ -217,7 +220,7 @@ class Moneris_Gateway
 	 */
 	public function preauth(array $params)
 	{
-		$params['type'] = 'preauth';
+		$params['type'] = (isset($params['data_key'])) ? 'res_preauth_cc' : 'preauth';
 		$params['crypt_type'] = 7;
 		$transaction = $this->transaction($params);
 	 	return $this->_process($transaction);
@@ -232,6 +235,9 @@ class Moneris_Gateway
 	 * 			- cc_number int Any non-numeric characters will be stripped
 	 *			- amount float
 	 * 			- expdate int 4 digit date YYMM
+	 * 			OR
+	 *			- data_key string A token/data key, used with Hosted Tokenization
+	 *			- amount float
 	 * 			OR
 	 *			- expiry_month int 2 digit representation of the expiry month (01-12)
 	 * 			- expiry_year int last two digits of the expiry year
@@ -257,7 +263,7 @@ class Moneris_Gateway
 	 */
 	public function purchase(array $params)
 	{
-		$params['type'] = 'purchase';
+		$params['type'] = (isset($params['data_key'])) ? 'res_purchase_cc' : 'purchase';
 		$params['crypt_type'] = 7;
 		$transaction = $this->transaction($params);
 	 	return $this->_process($transaction);
