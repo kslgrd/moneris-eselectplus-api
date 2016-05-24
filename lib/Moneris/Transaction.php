@@ -143,6 +143,19 @@ class Moneris_Transaction
 					if (! isset($params['PaRes'])) $errors[] = 'PaRes not provided';
 					if (! isset($params['MD'])) $errors[] = 'Merchant details "MD" not provided';
 					break;
+
+				case 'res_preauth_cc':
+					if (! isset($params['data_key']) || '' == $params['data_key']) $errors[] = 'Data Key not provided';
+					if (! isset($params['order_id']) || '' == $params['order_id']) $errors[] = 'Order ID not provided';
+					if (! isset($params['amount']) || '' == $params['amount']) $errors[] = 'Amount not provided';
+					break;
+
+				case 'res_purchase_cc':
+					if (! isset($params['data_key']) || '' == $params['data_key']) $errors[] = 'Data Key not provided';
+					if (! isset($params['order_id']) || '' == $params['order_id']) $errors[] = 'Order ID not provided';
+					if (! isset($params['amount']) || '' == $params['amount']) $errors[] = 'Amount not provided';
+					break;
+
 				default:
 					$errors[] = $params['type'] . ' is not a support transaction type';
 			}
