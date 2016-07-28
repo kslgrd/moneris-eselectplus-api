@@ -101,7 +101,7 @@ class Moneris_Transaction
 					break;
 
 				case 'completion':
-					if (! isset($params['comp_amount']) || '' === $params['comp_amount']) $errors[] = 'Amount not provided';
+					if (! isset($params['comp_amount']) || '' == $params['comp_amount']) $errors[] = 'Amount not provided';
 					if (! isset($params['order_id']) || '' == $params['order_id']) $errors[] = 'Order ID not provided';
 					if (! isset($params['txn_number']) || '' == $params['txn_number']) $errors[] = 'Transaction number not provided';
 					break;
@@ -144,16 +144,24 @@ class Moneris_Transaction
 					if (! isset($params['MD'])) $errors[] = 'Merchant details "MD" not provided';
 					break;
 
-				case 'res_preauth_cc':
-					if (! isset($params['data_key']) || '' == $params['data_key']) $errors[] = 'Data Key not provided';
-					if (! isset($params['order_id']) || '' == $params['order_id']) $errors[] = 'Order ID not provided';
-					if (! isset($params['amount']) || '' == $params['amount']) $errors[] = 'Amount not provided';
+				case 'res_purchase_cc':
+					if (! isset($params['data_key']) || '' == $params['data_key']) $errors[] = 'Data key not provided';
+					if (! isset($params['order_id'])) $errors[] = 'Order ID not provided';
+					if (! isset($params['amount'])) $errors[] = 'Amount not provided';
 					break;
 
-				case 'res_purchase_cc':
-					if (! isset($params['data_key']) || '' == $params['data_key']) $errors[] = 'Data Key not provided';
-					if (! isset($params['order_id']) || '' == $params['order_id']) $errors[] = 'Order ID not provided';
-					if (! isset($params['amount']) || '' == $params['amount']) $errors[] = 'Amount not provided';
+				case 'res_preauth_cc':
+					if (! isset($params['data_key']) || '' == $params['data_key']) $errors[] = 'Data key not provided';
+					if (! isset($params['order_id'])) $errors[] = 'Order ID not provided';
+					if (! isset($params['amount'])) $errors[] = 'Amount not provided';
+					break;
+
+				case 'res_update_cc':
+					if (! isset($params['data_key']) || '' == $params['data_key']) $errors[] = 'Data key not provided';
+					break;
+
+				case 'res_delete':
+					if (! isset($params['data_key']) || '' == $params['data_key']) $errors[] = 'Data key not provided';
 					break;
 
 				default:
