@@ -7,8 +7,8 @@ if (! empty($_POST)) {
 	// use the testing server for the demo:
 	$moneris = Moneris::create(
 		array(
-			'api_key' => 'xxxxxxxxxxxxxxxxxxx', // Under Admin / Store Settings
-			'store_id' => 'monca00yyy',
+			'api_key' => 'yesguy', // Under Admin / Store Settings
+			'store_id' => 'store1',
 			'environment' => Moneris::ENV_STAGING
 		)
 	);
