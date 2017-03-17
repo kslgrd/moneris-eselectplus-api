@@ -14,7 +14,22 @@ class Moneris_Processor
 		'port' => '443',
 		'url' => '/gateway2/servlet/MpgRequest',
 		'api_version' =>'PHP - 2.5.1',
-		'timeout' => '60'
+		'timeout' => '60',
+		'replacement' => ''
+	);
+
+	/**
+	 * Tags to be replaced for us store
+	 * @var array
+	 */
+	private static $_tagsToReplace = array(
+		'purchase', 'refund', 'ind_refund', 'preauth',
+		'completion', 'purchasecorrection', 'forcepost', 'cavv_preauth',
+		'cavv_purchase', 'track2_purchase', 'track2_refund', 'track2_ind_refund',
+		'track2_preauth', 'track2_completion', 'track2_purchasecorrection',
+		'track2_forcepost', 'ach_debit', 'ach_reversal', 'ach_credit',
+		'ach_fi_enquiry', 'pinless_debit_purchase', 'pinless_debit_refund',
+		'batchclose', 'opentotals', 'recur_update'
 	);
 
 	/**
@@ -30,11 +45,34 @@ class Moneris_Processor
 	 */
 	static public function config($environment)
 	{
-		if ($environment != Moneris::ENV_LIVE) {
-			self::$_config['host'] = 'esqa.moneris.com';
-		} else {
-			self::$_config['host'] = 'www3.moneris.com';
+		switch ($environment) {
+			case Moneris::ENV_LIVE:
+			case Moneris::ENV_LIVE_CA:
+				self::$_config['host'] = 'www3.moneris.com';
+				self::$_config['url'] = '/gateway2/servlet/MpgRequest';
+				self::$_config['replacement'] = '';
+				break;
+			case Moneris::ENV_STAGING:
+			case Moneris::ENV_TESTING:
+			case Moneris::ENV_STAGING_CA:
+			case Moneris::ENV_TESTING_CA:
+				self::$_config['host'] = 'esqa.moneris.com';
+				self::$_config['url'] = '/gateway2/servlet/MpgRequest';
+				self::$_config['replacement'] = '';
+				break;
+			case Moneris::ENV_LIVE_US:
+				self::$_config['host'] = 'esplus.moneris.com';
+				self::$_config['url'] = '/gateway_us/servlet/MpgRequest';
+				self::$_config['replacement'] = 'us_';
+				break;
+			case Moneris::ENV_STAGING_US:
+			case Moneris::ENV_TESTING_US:
+				self::$_config['host'] = 'esplusqa.moneris.com';
+				self::$_config['url'] = '/gateway_us/servlet/MpgRequest';
+				self::$_config['replacement'] = 'us_';
+				break;
 		}
+
 		return self::$_config;
 	}
 
@@ -70,7 +108,7 @@ class Moneris_Processor
 		$params = $transaction->params();
 		// frig... this MPI stuff is leaking gross code everywhere... needs to be refactored
 		if (in_array($params['type'], array('txn', 'acs')))
-			$config['url'] = '/mpi/servlet/MpiServlet';
+			$config['url'] = '/mpi/servlet/MpiServlet'; // This url is the same for us store. No need to care
 
 		$url = $config['protocol'] . '://' .
 			   $config['host'] . ':' .
@@ -78,6 +116,15 @@ class Moneris_Processor
 			   $config['url'];
 
 		$xml = str_replace(' </', '</', $transaction->to_xml());
+
+		if ( ! empty($config['replacement'])) {
+			$r = $config['replacement'];
+			foreach (self::$_tagsToReplace as $tag) {
+
+				$xml = str_replace('<' . $tag . '>', '<' . $r . $tag . '>', $xml);
+				$xml = str_replace('</' . $tag . '>', '</' . $r . $tag . '>', $xml);
+			}
+		}
 
 		//var_dump($url, $xml);
 

@@ -30,9 +30,19 @@ if (! function_exists('curl_init')) {
  */
 class Moneris
 {
+	// Preserve these constants for those who already use them
 	const ENV_LIVE = 'live'; // use the live API server
 	const ENV_STAGING = 'staging'; // use the API sandbox
 	const ENV_TESTING = 'testing'; // use the mock API
+
+	// Add store - dependent constants for those who use country codes
+	const ENV_LIVE_CA = 'live'; // use the live API server
+	const ENV_STAGING_CA = 'staging'; // use the API sandbox
+	const ENV_TESTING_CA = 'testing'; // use the mock API
+
+	const ENV_LIVE_US = 'live_us'; // use the live API server
+	const ENV_STAGING_US = 'staging_us'; // use the API sandbox
+	const ENV_TESTING_US = 'testing_us'; // use the mock API
 
 	/**
 	 * Start using the API, ya dingus!
