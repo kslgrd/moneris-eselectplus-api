@@ -325,6 +325,9 @@ class Moneris_Result
 				case '078':
 					$this->error_code(Moneris_Result::ERROR_DUPLICATE_TRANSACTION);
 					break;
+				case '478':
+				case '479':
+				case '480':
 				case '481':
 				case '483':
 					$this->error_code(Moneris_Result::ERROR_DECLINED);
