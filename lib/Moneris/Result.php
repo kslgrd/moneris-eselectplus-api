@@ -325,6 +325,7 @@ class Moneris_Result
 				case '078':
 					$this->error_code(Moneris_Result::ERROR_DUPLICATE_TRANSACTION);
 					break;
+				case '476':
 				case '478':
 				case '479':
 				case '480':
@@ -392,7 +393,7 @@ class Moneris_Result
 		if ($gateway->check_cvd()
 			&& ! is_null($this_code)
 			&& 'null' !== $this_code
-			&& ! in_array($this_code{1}, $gateway->successful_cvd_codes())) {
+			&& ! in_array($this_code[1], $gateway->successful_cvd_codes())) {
 
 			$this->error_code(Moneris_Result::ERROR_CVD)->failed_cvd(true);
 			return $this->was_successful(false);
